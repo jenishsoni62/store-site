@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+        }
+        .dashboard-card {
+            transition: all 0.3s ease;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .loader {
+            border-top-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .blur-background {
+            filter: blur(5px);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Warehouse Inventory Login</h2>
+            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/543a7e10-e343-4257-b64b-f9a7c27345cd.png" alt="Warehouse Pro logo with stylized inventory boxes" class="mx-auto mb-6">
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700">Employee ID</label>
+                    <input type="text" id="username" name="username" placeholder="Enter your employee ID" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Access Code</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your access code" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">Sign In</button>
+            </form>
+            <div id="loginError" class="mt-4 text-center text-sm text-red-600 hidden">Invalid employee ID or access code</div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard (Hidden until login) -->
+    <div id="dashboard" class="hidden">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/83c78bd6-23e2-4770-9bd7-624039e089b3.png" alt="Warehouse icon with shelves and boxes" class="mr-3">
+                    Inventory Management
+                </h1>
+                <div class="flex items-center">
+                    <button id="logoutBtn" class="text-sm text-gray-500 hover:text-gray-700">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+            <!-- Dashboard Overview -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Inventory Overview</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="dashboard-card bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-gray-500 text-sm font-medium">Total Items</h3>
+                                <p id="totalItems" class="text-2xl font-bold text-gray-800">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-gray-500 text-sm font-medium">Items In Stock</h3>
+                                <p id="inStockItems" class="text-2xl font-bold text-gray-800">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-gray-500 text-sm font-medium">Items Low Stock</h3>
+                                <p id="lowStockItems" class="text-2xl font-bold text-gray-800">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Add Section -->
+            <div class="mb-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Manage Inventory</h2>
+                    <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                        <div class="relative">
+                            <input type="text" id="searchInput" placeholder="Search items..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-full">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <button id="addItemBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Add New Item</button>
+                    </div>
+                </div>
+                
+                <!-- Add Item Modal -->
+                <div id="addItemModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Add New Stock Item</h3>
+                            <button id="closeAddModal" class="text-gray-500 hover:text-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <form id="addItemForm" class="space-y-4">
+                            <div>
+                                <label for="itemName" class="block text-sm font-medium text-gray-700">Item Name</label>
+                                <input type="text" id="itemName" name="itemName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="itemCategory" class="block text-sm font-medium text-gray-700">Category</label>
+                                <select id="itemCategory" name="itemCategory" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Select Category</option>
+                                    <option value="Electronics">Electronics</option>
+                                    <option value="Clothing">Clothing</option>
+                                    <option value="Furniture">Furniture</option>
+                                    <option value="Food">Food</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="itemQuantity" class="block text-sm font-medium text-gray-700">Quantity</label>
+                                <input type="number" id="itemQuantity" name="itemQuantity" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="itemPrice" class="block text-sm font-medium text-gray-700">Price ($)</label>
+                                <input type="number" id="itemPrice" name="itemPrice" min="0" step="0.01" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="itemThreshold" class="block text-sm font-medium text-gray-700">Low Stock Threshold</label>
+                                <input type="number" id="itemThreshold" name="itemThreshold" min="1" value="5" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" id="cancelAddItem" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Add Item</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Edit Item Modal -->
+                <div id="editItemModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Edit Stock Item</h3>
+                            <button id="closeEditModal" class="text-gray-500 hover:text-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <form id="editItemForm" class="space-y-4">
+                            <input type="hidden" id="editItemId">
+                            <div>
+                                <label for="editItemName" class="block text-sm font-medium text-gray-700">Item Name</label>
+                                <input type="text" id="editItemName" name="editItemName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="editItemCategory" class="block text-sm font-medium text-gray-700">Category</label>
+                                <select id="editItemCategory" name="editItemCategory" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Select Category</option>
+                                    <option value="Electronics">Electronics</option>
+                                    <option value="Clothing">Clothing</option>
+                                    <option value="Furniture">Furniture</option>
+                                    <option value="Food">Food</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="editItemQuantity" class="block text-sm font-medium text-gray-700">Quantity</label>
+                                <input type="number" id="editItemQuantity" name="editItemQuantity" min="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="editItemPrice" class="block text-sm font-medium text-gray-700">Price ($)</label>
+                                <input type="number" id="editItemPrice" name="editItemPrice" min="0" step="0.01" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="editItemThreshold" class="block text-sm font-medium text-gray-700">Low Stock Threshold</label>
+                                <input type="number" id="editItemThreshold" name="editItemThreshold" min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" id="cancelEditItem" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Table -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Items will be dynamically added here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- No Items Found Message -->
+            <div id="noItemsMessage" class="hidden mt-8 text-center">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/e0e20043-8b28-4470-9d3e-dd38e7d9bf38.png" alt="Empty warehouse shelves with no products" class="mx-auto mb-4">
+                <h3 class="text-lg font-medium text-gray-900">No inventory items found</h3>
+                <p class="mt-1 text-sm text-gray-500">Add your first item to begin managing your inventory.</p>
+                <button id="addFirstItemBtn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">Add New Item</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+        <div class="flex flex-col items-center">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+            <p class="text-white">Loading inventory...</p>
+        </div>
+    </div>
+
+    <script>
+        // Sample inventory data
+        let inventory = [
+            { id: 1, name: "Laptop Pro", category: "Electronics", quantity: 15, price: 999.99, threshold: 5 },
+            { id: 2, name: "Wireless Mouse", category: "Electronics", quantity: 42, price: 29.99, threshold: 10 },
+            { id: 3, name: "Office Chair", category: "Furniture", quantity: 8, price: 179.99, threshold: 3 },
+            { id: 4, name: "Notebook", category: "Office Supplies", quantity: 2, price: 4.99, threshold: 15 }
+        ];
+
+        // DOM Elements
+        const loginModal = document.getElementById('loginModal');
+        const loginForm = document.getElementById('loginForm');
+        const loginError = document.getElementById('loginError');
+        const dashboard = document.getElementById('dashboard');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const inventoryTableBody = document.getElementById('inventoryTableBody');
+        const noItemsMessage = document.getElementById('noItemsMessage');
+        const addFirstItemBtn = document.getElementById('addFirstItemBtn');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const addItemModal = document.getElementById('addItemModal');
+        const closeAddModal = document.getElementById('closeAddModal');
+        const cancelAddItem = document.getElementById('cancelAddItem');
+        const addItemForm = document.getElementById('addItemForm');
+        const editItemModal = document.getElementById('editItemModal');
+        const closeEditModal = document.getElementById('closeEditModal');
+        const cancelEditItem = document.getElementById('cancelEditItem');
+        const editItemForm = document.getElementById('editItemForm');
+        const searchInput = document.getElementById('searchInput');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const totalItemsElement = document.getElementById('totalItems');
+        const inStockItemsElement = document.getElementById('inStockItems');
+        const lowStockItemsElement = document.getElementById('lowStockItems');
+
+        // Current user (simulated)
+        let currentUser = null;
+
+        // Show login modal on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loginModal.classList.remove('hidden');
+        });
+
+        // Login functionality
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Simple validation (in real app, this would check against a database)
+            if (username === 'admin' && password === 'admin123') {
+                loginError.classList.add('hidden');
+                currentUser = { username, role: 'admin' };
+                loginModal.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+                showLoading();
+                // Simulate loading data from server
+                setTimeout(() => {
+                    hideLoading();
+                    updateDashboard();
+                    renderInventoryTable();
+                }, 1000);
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        // Logout functionality
+        logoutBtn.addEventListener('click', () => {
+            currentUser = null;
+            dashboard.classList.add('hidden');
+            loginModal.classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        });
+
+        // Search functionality
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            if (searchTerm === '') {
+                renderInventoryTable();
+            } else {
+                renderInventoryTable(searchTerm);
+            }
+        });
+
+        // Show add item modal
+        addItemBtn.addEventListener('click', () => {
+            addItemModal.classList.remove('hidden');
+        });
+
+        // Close add item modal
+        closeAddModal.addEventListener('click', () => {
+            addItemModal.classList.add('hidden');
+        });
+
+        cancelAddItem.addEventListener('click', () => {
+            addItemModal.classList.add('hidden');
+        });
+
+        // Add new item
+        addItemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newItem = {
+                id: Date.now(),
+                name: document.getElementById('itemName').value,
+                category: document.getElementById('itemCategory').value,
+                quantity: parseInt(document.getElementById('itemQuantity').value),
+                price: parseFloat(document.getElementById('itemPrice').value),
+                threshold: parseInt(document.getElementById('itemThreshold').value)
+            };
+            
+            inventory.push(newItem);
+            addItemModal.classList.add('hidden');
+            addItemForm.reset();
+            renderInventoryTable();
+            updateDashboard();
+            showToast('Item added successfully!');
+        });
+
+        // Add first item
+        addFirstItemBtn.addEventListener('click', () => {
+            addItemModal.classList.remove('hidden');
+        });
+
+        // Edit item modal
+        function setupEditModal(item) {
+            document.getElementById('editItemId').value = item.id;
+            document.getElementById('editItemName').value = item.name;
+            document.getElementById('editItemCategory').value = item.category;
+            document.getElementById('editItemQuantity').value = item.quantity;
+            document.getElementById('editItemPrice').value = item.price;
+            document.getElementById('editItemThreshold').value = item.threshold;
+            editItemModal.classList.remove('hidden');
+        }
+
+        // Close edit modal
+        closeEditModal.addEventListener('click', () => {
+            editItemModal.classList.add('hidden');
+        });
+
+        cancelEditItem.addEventListener('click', () => {
+            editItemModal.classList.add('hidden');
+        });
+
+        // Save edited item
+        editItemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('editItemId').value);
+            const updatedItem = {
+                id,
+                name: document.getElementById('editItemName').value,
+                category: document.getElementById('editItemCategory').value,
+                quantity: parseInt(document.getElementById('editItemQuantity').value),
+                price: parseFloat(document.getElementById('editItemPrice').value),
+                threshold: parseInt(document.getElementById('editItemThreshold').value)
+            };
+            
+            inventory = inventory.map(item => item.id === id ? updatedItem : item);
+            editItemModal.classList.add('hidden');
+            renderInventoryTable();
+            updateDashboard();
+            showToast('Item updated successfully!');
+        });
+
+        // Delete item
+        function deleteItem(id) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                inventory = inventory.filter(item => item.id !== id);
+                renderInventoryTable();
+                updateDashboard();
+                showToast('Item deleted successfully!');
+            }
+        }
+
+        // Render inventory table
+        function renderInventoryTable(searchTerm = '') {
+            let filteredItems = [...inventory];
+            
+            if (searchTerm) {
+                filteredItems = inventory.filter(item => 
+                    item.name.toLowerCase().includes(searchTerm) || 
+                    item.category.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            inventoryTableBody.innerHTML = '';
+            
+            if (filteredItems.length === 0) {
+                inventoryTableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No items found</td></tr>';
+                noItemsMessage.classList.remove('hidden');
+            } else {
+                noItemsMessage.classList.add('hidden');
+                
+                filteredItems.forEach(item => {
+                    const row = document.createElement('tr');
+                    const statusClass = item.quantity === 0 ? 'bg-red-100 text-red-800' : 
+                                      item.quantity <= item.threshold ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800';
+                    const statusText = item.quantity === 0 ? 'Out of Stock' : 
+                                     item.quantity <= item.threshold ? 'Low Stock' : 'In Stock';
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10">
+                                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/54bff78c-8b08-4115-8b2b-1e728dffcdc7.png" alt="${item.name}" class="h-10 w-10 rounded-full">
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">${item.name}</div>
+                                    <div class="text-sm text-gray-500">ID: ${item.id}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${item.category}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${item.quantity}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            $${item.price.toFixed(2)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                ${statusText}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                            <button onclick="setupEditModal(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="text-blue-600 hover:text-blue-900">Edit</button>
+                            <button onclick="deleteItem(${item.id})" class="text-red-600 hover:text-red-900">Delete</button>
+                        </td>
+                    `;
+                    
+                    inventoryTableBody.appendChild(row);
+                });
+            }
+        }
+
+        // Update dashboard metrics
+        function updateDashboard() {
+            const totalItems = inventory.length;
+            const inStockItems = inventory.filter(item => item.quantity > 0).length;
+            const lowStockItems = inventory.filter(item => item.quantity > 0 && item.quantity <= item.threshold).length;
+            
+            totalItemsElement.textContent = totalItems;
+            inStockItemsElement.textContent = inStockItems;
+            lowStockItemsElement.textContent = lowStockItems;
+        }
+
+        // Show loading indicator
+        function showLoading() {
+            loadingIndicator.classList.remove('hidden');
+            document.body.classList.add('blur-background');
+        }
+
+        // Hide loading indicator
+        function hideLoading() {
+            loadingIndicator.classList.add('hidden');
+            document.body.classList.remove('blur-background');
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 opacity-0';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-100');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize
+        function init() {
+            // These functions would be called after a successful login
+            // Currently handled in the login event listener
+        }
+        
+        init();
+    </script>
+</body>
+</html>
+
+
